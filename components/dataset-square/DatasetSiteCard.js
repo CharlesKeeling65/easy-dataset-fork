@@ -1,18 +1,18 @@
 'use client';
 
+import LaunchIcon from '@mui/icons-material/Launch';
+import StorageIcon from '@mui/icons-material/Storage';
 import {
+  alpha,
+  Box,
   Card,
   CardActionArea,
   CardContent,
   CardMedia,
-  Typography,
-  Box,
   Chip,
-  useTheme,
-  alpha
+  Typography,
+  useTheme
 } from '@mui/material';
-import LaunchIcon from '@mui/icons-material/Launch';
-import StorageIcon from '@mui/icons-material/Storage';
 import { useTranslation } from 'react-i18next';
 
 export function DatasetSiteCard({ site }) {
