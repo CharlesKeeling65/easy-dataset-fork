@@ -5,12 +5,14 @@ FROM node:18-alpine
 WORKDIR /app
 
 # 安装pnpm
+
 RUN npm install -g pnpm
 
 # 复制package.json和pnpm-lock.yaml
 COPY package.json pnpm-lock.yaml* ./
 
 # 安装依赖
+RUN pnpm config set registry https://registry.npmmirror.com --global
 RUN pnpm install
 
 # 复制所有文件
