@@ -1,46 +1,45 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { Box, Container, Typography, Paper, Divider, useTheme, alpha } from '@mui/material';
+import StorageIcon from '@mui/icons-material/Storage';
 import Navbar from '@/components/Navbar';
 import { DatasetSearchBar } from '@/components/dataset-square/DatasetSearchBar';
 import { DatasetSiteList } from '@/components/dataset-square/DatasetSiteList';
-import StorageIcon from '@mui/icons-material/Storage';
-import { alpha, Box, CircularProgress, Container, Paper, Typography, useTheme } from '@mui/material';
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function DatasetSquarePage() {
   const [projects, setProjects] = useState([]);
   const [models, setModels] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState(null);
-  const [searchError, setSearchError] = useState(null);
   const theme = useTheme();
   const { t } = useTranslation();
 
+  // 获取项目列表和模型列表
   useEffect(() => {
     async function fetchData() {
       try {
+        // 从 localStorage 获取项目 ID 数组
         const userProjectIds = JSON.parse(localStorage.getItem('userProjects') || '[]');
 
         if (userProjectIds.length === 0) {
+          // 如果没有保存的项目，直接设置为空数组
           setProjects([]);
+          setLoading(false);
           return;
         }
 
-        const projectsResponse = await fetch(`/api/projects?projectIds=${userProjectIds.join(',')}`);
+        // 获取用户创建的项目详情
+        const response = await fetch(`/api/projects?projectIds=${userProjectIds.join(',')}`);
         if (projectsResponse.ok) {
           const projectsData = await projectsResponse.json();
           setProjects(projectsData);
-        } else {
-          console.error('Failed to fetch projects');
         }
 
+        // 获取模型列表
         const modelsResponse = await fetch('/api/models');
         if (modelsResponse.ok) {
           const modelsData = await modelsResponse.json();
           setModels(modelsData);
-        } else {
-          console.error('Failed to fetch models');
         }
       } catch (error) {
         console.error('获取数据失败:', error);
@@ -50,49 +49,12 @@ export default function DatasetSquarePage() {
     fetchData();
   }, []);
 
-  const handleSearch = async (query) => {
-    if (!query || query.trim() === '') return;
-
-    console.log('Searching for:', query);
-    setIsSearching(true);
-    setSearchResults(null);
-    setSearchError(null);
-
-    try {
-      const response = await fetch('/api/dataset-search', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: query.trim() }),
-      });
-
-      if (!response.ok) {
-        let errorMsg = t('datasetSquare.searchError');
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.error || errorMsg;
-        } catch (e) {
-          console.error('Could not parse error response:', e);
-        }
-        throw new Error(`API Error (${response.status}): ${errorMsg}`);
-      }
-
-      const data = await response.json();
-      setSearchResults(data);
-
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchError(error.message || t('datasetSquare.searchError'));
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   return (
     <main>
+      {/* 导航栏 */}
       <Navbar projects={projects} models={models} hideModels={true} />
 
+      {/* 头部区域 */}
       <Box
         sx={{
           pt: 10,
@@ -105,6 +67,7 @@ export default function DatasetSquarePage() {
           boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
         }}
       >
+        {/* 背景装饰 */}
         <Box
           sx={{
             position: 'absolute',
@@ -192,6 +155,7 @@ export default function DatasetSquarePage() {
             {t('datasetSquare.subtitle')}
           </Typography>
 
+          {/* 搜索栏组件 */}
           <Box sx={{
             maxWidth: 800,
             mx: 'auto',
@@ -218,65 +182,35 @@ export default function DatasetSquarePage() {
                     ? '0 15px 50px rgba(0,0,0,0.4)'
                     : '0 15px 50px rgba(0,0,0,0.2)'
                 },
-                overflow: 'visible'
+                overflow: 'visible' // 确保不裁剪子元素
               }}
             >
-              <DatasetSearchBar onSearch={handleSearch} />
+              <DatasetSearchBar />
             </Paper>
           </Box>
         </Container>
       </Box>
 
+      {/* 内容区域 */}
       <Container maxWidth="lg" sx={{ py: 8 }}>
-        {isSearching && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 5 }}>
-            <CircularProgress />
-            <Typography sx={{ ml: 2 }}>{t('datasetSquare.searching')}</Typography>
-          </Box>
-        )}
-        {searchError && (
-          <Paper elevation={2} sx={{ p: 3, mb: 4, bgcolor: 'error.light', color: 'error.contrastText', borderRadius: 2 }}>
-            <Typography variant="h6" gutterBottom>{t('common.error')}</Typography>
-            <Typography>{searchError}</Typography>
-          </Paper>
-        )}
-        {searchResults && (
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 2, sm: 4 },
-              borderRadius: 3,
-              bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.7) : alpha(theme.palette.background.default, 0.8),
-              backdropFilter: 'blur(10px)',
-              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              boxShadow: theme.palette.mode === 'dark' ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.05)',
-              mb: 4
-            }}
-          >
-            <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>{t('datasetSquare.searchResultsTitle')}</Typography>
-            <pre>{JSON.stringify(searchResults, null, 2)}</pre>
-          </Paper>
-        )}
-
-        {!isSearching && !searchResults && !searchError && (
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 2, sm: 4 },
-              borderRadius: 3,
-              bgcolor: theme.palette.mode === 'dark'
-                ? alpha(theme.palette.background.paper, 0.6)
-                : theme.palette.background.paper,
-              backdropFilter: 'blur(8px)',
-              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              boxShadow: theme.palette.mode === 'dark'
-                ? '0 4px 20px rgba(0,0,0,0.2)'
-                : '0 4px 20px rgba(0,0,0,0.05)'
-            }}
-          >
-            <DatasetSiteList />
-          </Paper>
-        )}
+        {/* 数据集网站列表组件 */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2, sm: 4 },
+            borderRadius: 3,
+            bgcolor: theme.palette.mode === 'dark'
+              ? alpha(theme.palette.background.paper, 0.6)
+              : theme.palette.background.paper,
+            backdropFilter: 'blur(8px)',
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 4px 20px rgba(0,0,0,0.2)'
+              : '0 4px 20px rgba(0,0,0,0.05)'
+          }}
+        >
+          <DatasetSiteList />
+        </Paper>
       </Container>
     </main>
   );
